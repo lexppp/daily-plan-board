@@ -38,6 +38,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 .backup-notice{background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;font-size:14px;color:#92400e}
 .backup-notice svg{width:18px;height:18px;flex-shrink:0}
 
+/* ===== 消息中心（小邮箱） ===== */
+.inbox-btn{position:relative}
+.inbox-badge{position:absolute;top:-7px;right:-7px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid var(--card)}
+.mail-item{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:var(--card)}
+.mail-item:hover{box-shadow:var(--shadow-md)}
+.mail-item.unread{background:var(--primary-light);border-color:var(--primary)}
+.mail-item.read{opacity:.75}
+.mail-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);margin-right:6px;flex-shrink:0}
+.mail-head{display:flex;align-items:center;gap:6px}
+.mail-type{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.mail-type.update{background:#dbeafe;color:var(--primary-dark)}
+.mail-type.overdue{background:var(--danger-light);color:var(--danger)}
+.mail-type.urgent{background:#fef3c7;color:#92400e}
+.mail-title{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-item.read .mail-title{font-weight:400;color:var(--text-2)}
+.mail-body{font-size:12px;color:var(--text-2);margin-top:5px;line-height:1.6;word-break:break-all}
+.mail-time{font-size:11px;color:var(--text-3);margin-top:5px}
+.mail-empty{text-align:center;padding:36px 16px;color:var(--text-3);font-size:13px}
+.mail-empty svg{width:44px;height:44px;opacity:.35;margin-bottom:8px}
+
 /* ===== 今天要处理 ===== */
 .today-section{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
 .today-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -298,6 +318,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
     <button class="btn btn-outline btn-sm" onclick="openReminderSettings()" id="reminderBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
       <span id="reminderBtnLabel">提醒</span>
+    </button>
+    <button class="btn btn-outline btn-sm inbox-btn" onclick="openInbox()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      消息
+      <span id="inboxBadge" class="inbox-badge" style="display:none">0</span>
     </button>
     <button class="btn btn-outline btn-sm" onclick="exportJSON()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -687,12 +712,204 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   </div>
 </div>
 
+<!-- ===== 消息中心（小邮箱） ===== -->
+<div id="inboxModal" class="modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">消息中心</div>
+    <div class="modal-body" style="padding:12px 16px;max-height:60vh;overflow-y:auto">
+      <div id="inboxList"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline btn-sm" onclick="markAllMailsRead()">一键已读</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteReadMails()">删除已读</button>
+      <button class="btn btn-primary btn-sm" onclick="closeInbox()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 版本更新弹窗（每次更新仅首次打开出现） ===== -->
+<div id="updateModal" class="modal-overlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">更新完成 · <span id="updateVersionLabel">v1.0.0</span></div>
+    <div class="modal-body">
+      <p style="font-weight:600;margin-bottom:8px">本次更新内容：</p>
+      <ul id="updateNotesList" style="padding-left:20px;line-height:1.9;font-size:13px;color:var(--text-2)"></ul>
+      <p style="font-size:12px;color:var(--text-3);margin-top:10px">此消息已自动存入顶部「消息」小邮箱，可随时回看。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="dismissUpdatePopup()">知道了</button>
+    </div>
+  </div>
+</div>
+
 <div class="bottom-spacer"></div>
 
 <script>
 // ===== 全局状态 =====
 var STORAGE_KEY = 'wb_dailyplan_tasks';
 var selectedPriority = 'P2';
+
+// ===== 版本与更新日志 =====
+var APP_VERSION = '1.2.0';
+var RELEASE_NOTES = {
+  '1.2.0': [
+    '新增「消息中心」：逾期、紧急任务和版本更新都会推送进来，有未读时顶部「消息」按钮显示红点',
+    '新增版本更新弹窗：每次更新后首次打开自动展示更新内容',
+    '新增「明日要处理」栏：明天的计划不再混入「今天要处理」'
+  ],
+  '1.1.0': [
+    '新增周计划板：周一至周日提前排计划，支持提前完成',
+    '修复逾期周期任务无法打卡的问题'
+  ]
+};
+
+// ===== 消息中心（小邮箱） =====
+var INBOX_KEY = 'wb_dailyplan_inbox';
+var SEEN_VER_KEY = 'wb_dailyplan_seen_ver';
+var SWEEP_KEY = 'wb_dailyplan_sweep';
+var inbox = [];
+
+function loadInbox() {
+  try {
+    var raw = localStorage.getItem(INBOX_KEY);
+    inbox = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(inbox)) inbox = [];
+  } catch(e) { inbox = []; }
+}
+function saveInbox() {
+  try { localStorage.setItem(INBOX_KEY, JSON.stringify(inbox)); } catch(e) {}
+}
+function fmtDateTime(d) {
+  return fmtDate(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+// 写入一封邮件；dedupeKey 相同则跳过（防重复推送），返回是否成功写入
+function addMail(type, title, body, dedupeKey) {
+  if (dedupeKey) {
+    for (var i = 0; i < inbox.length; i++) {
+      if (inbox[i].key === dedupeKey) return false;
+    }
+  }
+  inbox.unshift({
+    id: Date.now() + '_' + Math.floor(Math.random() * 10000),
+    type: type, title: title, body: body,
+    time: fmtDateTime(new Date()),
+    read: false, key: dedupeKey || ''
+  });
+  if (inbox.length > 100) inbox = inbox.slice(0, 100); // 上限保护
+  saveInbox();
+  renderInboxBadge();
+  return true;
+}
+function getUnreadCount() {
+  var n = 0;
+  inbox.forEach(function(m) { if (!m.read) n++; });
+  return n;
+}
+function renderInboxBadge() {
+  var b = document.getElementById('inboxBadge');
+  if (!b) return;
+  var n = getUnreadCount();
+  if (n > 0) {
+    b.style.display = 'flex';
+    b.textContent = n > 99 ? '99+' : String(n);
+  } else {
+    b.style.display = 'none';
+  }
+}
+var MAIL_TYPE_LABELS = { update: '更新', overdue: '逾期', urgent: '紧急' };
+function openInbox() {
+  renderInboxList();
+  document.getElementById('inboxModal').classList.add('show');
+}
+function closeInbox() {
+  document.getElementById('inboxModal').classList.remove('show');
+}
+function renderInboxList() {
+  var el = document.getElementById('inboxList');
+  if (inbox.length === 0) {
+    el.innerHTML = '<div class="mail-empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+      '<div>暂无消息</div><div style="font-size:11px;margin-top:4px">逾期、紧急任务和版本更新会出现在这里</div></div>';
+    return;
+  }
+  el.innerHTML = inbox.map(function(m) {
+    return '<div class="mail-item ' + (m.read ? 'read' : 'unread') + '" onclick="markMailRead(\'' + m.id + '\')">' +
+      '<div class="mail-head">' +
+        (m.read ? '' : '<span class="mail-dot"></span>') +
+        '<span class="mail-type ' + m.type + '">' + (MAIL_TYPE_LABELS[m.type] || '通知') + '</span>' +
+        '<span class="mail-title">' + escapeHtml(m.title) + '</span>' +
+      '</div>' +
+      '<div class="mail-body">' + escapeHtml(m.body) + '</div>' +
+      '<div class="mail-time">' + escapeHtml(m.time) + '</div>' +
+    '</div>';
+  }).join('');
+}
+function markMailRead(id) {
+  inbox.forEach(function(m) { if (m.id === id) m.read = true; });
+  saveInbox();
+  renderInboxList();
+  renderInboxBadge();
+}
+function markAllMailsRead() {
+  if (getUnreadCount() === 0) { showToast('没有未读消息', 'info'); return; }
+  inbox.forEach(function(m) { m.read = true; });
+  saveInbox();
+  renderInboxList();
+  renderInboxBadge();
+  showToast('已全部标记为已读', 'success');
+}
+function deleteReadMails() {
+  var unread = inbox.filter(function(m) { return !m.read; });
+  if (unread.length === inbox.length) { showToast('没有已读消息可删除', 'info'); return; }
+  inbox = unread;
+  saveInbox();
+  renderInboxList();
+  renderInboxBadge();
+  showToast('已删除已读消息', 'success');
+}
+
+// 每日推送：逾期未完成 + P0 紧急任务（开了每日提醒则到提醒时间点后推送，否则打开页面即推送；每天最多一次，靠 dedupeKey 防重复）
+function inboxSweep() {
+  var t = todayStr();
+  if (localStorage.getItem(SWEEP_KEY) === t) return;
+  if (reminderSettings.dailyReminder) {
+    var now = new Date();
+    var cur = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    if (cur < reminderSettings.dailyTime) return; // 还没到提醒点
+  }
+  localStorage.setItem(SWEEP_KEY, t);
+  var od = getOverdueTasks();
+  if (od.length > 0) {
+    var names = od.slice(0, 5).map(function(x) { return '「' + x.title + '」'; }).join('、') + (od.length > 5 ? ' 等' : '');
+    addMail('overdue', '有 ' + od.length + ' 项计划已逾期', names + ' 逾期未完成，记得处理或补打卡。', 'overdue_' + t);
+  }
+  var p0 = tasks.filter(function(tk) {
+    return tk.priority === 'P0' && isTaskActiveOn(tk, t) && !isTaskDoneOnDay(tk, t);
+  });
+  if (p0.length > 0) {
+    var names2 = p0.slice(0, 5).map(function(x) { return '「' + x.title + '」'; }).join('、') + (p0.length > 5 ? ' 等' : '');
+    addMail('urgent', 'P0 紧急任务待处理', names2 + ' 紧急且未完成，优先安排！', 'urgent_' + t);
+  }
+  renderInboxBadge();
+}
+
+// 版本更新弹窗：每个版本仅首次打开出现；关闭后转入消息中心
+function checkUpdatePopup() {
+  if (localStorage.getItem(SEEN_VER_KEY) === APP_VERSION) return;
+  var notes = RELEASE_NOTES[APP_VERSION] || [];
+  document.getElementById('updateVersionLabel').textContent = 'v' + APP_VERSION;
+  document.getElementById('updateNotesList').innerHTML = notes.map(function(n) {
+    return '<li>' + escapeHtml(n) + '</li>';
+  }).join('');
+  document.getElementById('updateModal').classList.add('show');
+}
+function dismissUpdatePopup() {
+  document.getElementById('updateModal').classList.remove('show');
+  localStorage.setItem(SEEN_VER_KEY, APP_VERSION);
+  var notes = RELEASE_NOTES[APP_VERSION] || [];
+  addMail('update', '已更新到 v' + APP_VERSION, notes.join('；'), 'update_' + APP_VERSION);
+  renderInboxBadge();
+}
 var selectedDuration = 'day';
 var currentFilter = 'today';
 var currentView = 'today';
@@ -1551,6 +1768,10 @@ function hideClearModal() { document.getElementById('clearModal').classList.remo
 function clearAllData() {
   tasks = [];
   saveTasks();
+  inbox = [];
+  saveInbox();
+  try { localStorage.removeItem(SWEEP_KEY); } catch(e) {}
+  renderInboxBadge();
   hideClearModal();
   renderAll();
 }
@@ -1960,6 +2181,7 @@ function queueReminder(type, key, title, body) {
 function checkReminders() {
   lastCheckTime = new Date();
   updateReminderStatus();
+  inboxSweep();
 
   var now = new Date();
   var todayKey = todayStr();
@@ -2088,8 +2310,12 @@ function renderAll() {
 function init() {
   loadTasks();
   loadReminderSettings();
+  loadInbox();
   document.getElementById('taskDate').value = todayStr();
   renderAll();
+  renderInboxBadge();
+  inboxSweep();
+  checkUpdatePopup();
   updateReminderBtnLabel();
   startReminderChecker();
 }
