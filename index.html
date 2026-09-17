@@ -51,7 +51,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 .today-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0}
 .today-badge.overdue{background:var(--danger);color:#fff}
 .today-badge.today{background:var(--primary);color:#fff}
-.today-badge.soon{background:var(--warning);color:#fff}
+.today-badge.tomorrow{background:#3b82f6;color:#fff}
+.tomorrow-section .today-count{background:#3b82f6}
+.tomorrow-section .today-item{background:#eff6ff}
+.tomorrow-section .today-item:hover{background:#dbeafe}
 .today-item-title{flex:1;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .today-item-priority{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
 .priority-P0{background:var(--p0);color:#fff}
@@ -349,6 +352,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
       <span id="todayCount" class="today-count" style="display:none">0</span>
     </div>
     <div id="todayList" class="today-list"></div>
+  </div>
+
+  <!-- ===== 明日要处理（仅显示明天到期的计划，无则整栏隐藏） ===== -->
+  <div class="today-section tomorrow-section" id="tomorrowSection" style="display:none">
+    <div class="today-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="12 14 12 18 14 16" /></svg>
+      <h2>明日要处理</h2>
+      <span id="tomorrowCount" class="today-count" style="display:none">0</span>
+    </div>
+    <div id="tomorrowList" class="today-list"></div>
   </div>
 
   <!-- ===== 双栏：计划管理 + 统计看板 ===== -->
@@ -699,6 +712,7 @@ function fmtDate(d) {
   return y + '-' + m + '-' + day;
 }
 function todayStr() { return fmtDate(new Date()); }
+function tomorrowStr() { var d = new Date(); d.setDate(d.getDate() + 1); return fmtDate(d); }
 function parseDate(s) { var p = s.split('-'); return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2])); }
 function daysBetween(d1, d2) { return Math.round((d2 - d1) / 86400000); }
 
@@ -839,10 +853,16 @@ function getTodayTasks() {
 function getOverdueTasks() {
   return tasks.filter(function(task) { return isTaskOverdue(task); });
 }
-function getSoonTasks() {
-  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  var tm = fmtDate(tomorrow);
-  return tasks.filter(function(task) { return isTaskStartingOn(task, tm); });
+// 明天要处理的任务：明天当天活跃、非长期（长期每天都活跃，无意义）、且未提前完成
+function getTomorrowTasks() {
+  var tm = tomorrowStr();
+  return tasks.filter(function(task) {
+    var dur = task.duration || 'day';
+    if (dur === 'longterm') return false;
+    if (!isTaskActiveOn(task, tm)) return false;
+    if (isTaskDoneOnDay(task, tm)) return false;
+    return true;
+  });
 }
 function getActiveTasks() {
   var t = todayStr();
@@ -860,7 +880,6 @@ function renderTodaySection() {
   var t = todayStr();
   var overdue = getOverdueTasks();
   var todayTasks = getTodayTasks();
-  var soon = getSoonTasks();
 
   // Categorize today tasks: longterm vs ongoing vs today
   var longtermTasks = todayTasks.filter(function(task) { return (task.duration || 'day') === 'longterm'; });
@@ -871,8 +890,7 @@ function renderTodaySection() {
     .concat(overdue.map(function(tk) { tk._status = 'overdue'; return tk; }))
     .concat(dayTodayTasks.map(function(tk) { tk._status = 'today'; return tk; }))
     .concat(ongoingTasks.map(function(tk) { tk._status = 'ongoing'; return tk; }))
-    .concat(longtermTasks.map(function(tk) { tk._status = 'longterm'; return tk; }))
-    .concat(soon.map(function(tk) { tk._status = 'soon'; return tk; }));
+    .concat(longtermTasks.map(function(tk) { tk._status = 'longterm'; return tk; }));
 
   var countEl = document.getElementById('todayCount');
   var listEl = document.getElementById('todayList');
@@ -892,8 +910,7 @@ function renderTodaySection() {
     overdue: '<span class="today-badge overdue">逾期</span>',
     today: '<span class="today-badge today">今天</span>',
     ongoing: '<span class="today-badge ongoing">进行中</span>',
-    longterm: '<span class="today-badge longterm">长期</span>',
-    soon: '<span class="today-badge soon">即将</span>'
+    longterm: '<span class="today-badge longterm">长期</span>'
   };
 
   listEl.innerHTML = all.map(function(task) {
@@ -914,6 +931,44 @@ function renderTodaySection() {
       durBadge +
       '<span class="today-item-priority priority-' + task.priority + '">' + task.priority + '</span>' +
       '<button class="btn btn-primary btn-sm today-item-btn" onclick="quickComplete(' + task.id + ')">' + (dur === 'day' ? '完成' : '打卡') + '</button>' +
+      '</div>';
+  }).join('');
+}
+
+// ===== 渲染：明日要处理（只显示明天到期的计划，无任务时整栏隐藏） =====
+function renderTomorrowSection() {
+  var tm = tomorrowStr();
+  var secEl = document.getElementById('tomorrowSection');
+  var countEl = document.getElementById('tomorrowCount');
+  var listEl = document.getElementById('tomorrowList');
+  var list = getTomorrowTasks();
+
+  if (!list.length) {
+    secEl.style.display = 'none';
+    return;
+  }
+  secEl.style.display = '';
+  countEl.style.display = 'inline-block';
+  countEl.textContent = list.length;
+
+  listEl.innerHTML = list.map(function(task) {
+    var timeStr = task.time ? ' ' + task.time : '';
+    var durBadge = '';
+    var dur = task.duration || 'day';
+    if (dur !== 'day') {
+      durBadge = '<span class="' + getDurationBadgeClass(task) + '">' + getDurationLabel(task) + '</span>';
+      var prog = getCheckinProgress(task);
+      if (prog) {
+        durBadge += '<span class="duration-badge" style="background:#dcfce7;color:#166534">已打卡' + prog.done + '/' + prog.total + '天</span>';
+      }
+    }
+    var btnLabel = dur === 'day' ? '提前完成' : '预打卡';
+    return '<div class="today-item">' +
+      '<span class="today-badge tomorrow">明天</span>' +
+      '<span class="today-item-title">' + escapeHtml(task.title) + timeStr + '</span>' +
+      durBadge +
+      '<span class="today-item-priority priority-' + task.priority + '">' + task.priority + '</span>' +
+      '<button class="btn btn-primary btn-sm today-item-btn" onclick="quickComplete(' + task.id + ',\'' + tm + '\')">' + btnLabel + '</button>' +
       '</div>';
   }).join('');
 }
@@ -1417,21 +1472,22 @@ function toggleTask(id, dateStr) {
   renderAll();
 }
 
-function quickComplete(id) {
+function quickComplete(id, dateStr) {
   var task = tasks.filter(function(t) { return t.id === id; })[0];
   if (!task) return;
   var dur = task.duration || 'day';
-  var t = todayStr();
+  var t = dateStr || todayStr();
+  var isToday = t === todayStr();
   var wasDone = isTaskDoneOnDay(task, t);
-  toggleTask(id);
+  toggleTask(id, t);
   // 视觉反馈
   if (dur === 'day') {
     showToast('✓ 已完成：' + task.title, 'success');
   } else {
     if (wasDone) {
-      showToast('已取消今日打卡：' + task.title, 'info');
+      showToast((isToday ? '已取消今日打卡' : '已取消打卡') + '：' + task.title, 'info');
     } else {
-      showToast('✓ 打卡成功：' + task.title, 'success');
+      showToast('✓ 打卡成功' + (isToday ? '' : '（' + t.slice(5) + '）') + '：' + task.title, 'success');
     }
   }
 }
@@ -2021,6 +2077,7 @@ function startReminderChecker() {
 
 function renderAll() {
   renderTodaySection();
+  renderTomorrowSection();
   renderTaskList();
   renderStats();
   checkBackupNotice();
