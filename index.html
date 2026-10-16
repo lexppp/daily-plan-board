@@ -994,7 +994,6 @@ footer.side-note{text-align:center;padding:var(--sp-4) 0;color:var(--ink-3);font
       </div>
       <div data-page-node-id="57wUayGuiYcTrR8lQmZfu1" class="tools">
         <button data-page-node-id="ZcdD0vB6xqfiAlnOrJHIo4" class="btn btn-sm" id="importBtn"><!--pnid:wVVEgOd5KbeObIcvDoHI7n-->导入恢复</button>
-        <button data-page-node-id="YT7gl2DrHfftyG68QLqIHi" class="btn btn-sm btn-ghost" hidden id="clearDemo"><!--pnid:lyUiFCZ136fqAHCdDTNiuD-->清空示例</button>
         <input data-page-node-id="tVBMmEfYOIkEYQRGgmwXS1" accept=".json" hidden id="importFile" type="file">
       </div>
     </div>
@@ -1631,48 +1630,6 @@ function isLocalRecord(key, id){
   return false;
 }
 
-/* ---------- 示例数据（仅本地展示，不写云端） ---------- */
-function demoData(){
-  var t = todayStr();
-  var d = function(offset){ var x = new Date(); x.setDate(x.getDate()+offset); return todayStr(x); };
-  return {
-    fitness: [
-      { _id:'demo1', 日期:d(-6), '体重(斤)':140, '体脂率(%)':34.8, 训练内容:'全身力量 50min（深蹲/卧推/划船）', 饮食记录:'三餐正常，晚餐减半主食', 饮食:'标准健康饮食', 状态:'训练日' },
-      { _id:'demo2', 日期:d(-3), '体重(斤)':139.2, '体脂率(%)':34.4, 训练内容:'有氧 40min 快走爬坡', 饮食记录:'蛋白粉 1 勺 + 鸡胸沙拉', 饮食:'纯高蛋白吃肉日', 状态:'训练日' },
-      { _id:'demo3', 日期:d(-1), '体重(斤)':138.6, '体脂率(%)':34.1, 训练内容:'休息日拉伸 20min', 饮食记录:'外食火锅，控制蘸料', 饮食:'外卖高油超标', 经期:'经期日', 状态:'放纵日' }
-    ],
-    growth: [
-      { _id:'g1', 方向:'自由教练', 目标:'拿到 3 个长期私教客户', '进度(%)':35, 本月行动:'整理 1 份训练营方案 + 在小红书发 4 条教学视频', 截止日期:d(45), 状态:'进行中' },
-      { _id:'g2', 方向:'自由剪辑', 目标:'接单 5 条商业短视频', '进度(%)':20, 本月行动:'做 3 条样片，挂 2 个接单渠道', 截止日期:d(30), 状态:'进行中' },
-      { _id:'g3', 方向:'自媒体打造', 目标:'乒乓/击剑垂类账号破 5000 粉', '进度(%)':48, 本月行动:'日更 1 条，每周复盘数据', 截止日期:d(-2), 状态:'进行中' },
-      { _id:'g4', 方向:'本职进阶', 目标:'体培内容运营 SOP 成型', '进度(%)':60, 本月行动:'把选题→分发流程写成一页纸', 截止日期:d(15), 状态:'进行中' }
-    ],
-    work: [
-      { _id:'w1', 日期:d(-1), 平台:'抖音官方号', 选题标题:'少儿击剑入门：3 个动作看懂比赛规则', 热点来源:'乒乓/击剑热点检索', 文案要点:'钩子：孩子第一次看击剑比赛，90% 家长看不懂得分', 状态:'制作中', 发布日期:d(-1) },
-      { _id:'w2', 日期:d(-1), 平台:'抖音个人号', 选题标题:'乒乓国乒名场面混剪·热血向', 热点来源:'热点榜', 文案要点:'蹭热点情绪向，前 3 秒上名场面', 状态:'已发布', 发布日期:d(-1) },
-      { _id:'w3', 日期:t, 平台:'小红书', 选题标题:'体培机构怎么选？家长最关心的 5 个问题', 热点来源:'家长讨论区', 文案要点:'图文 6 图，首图做清单体', 状态:'选题池', 发布日期:'' },
-      { _id:'w4', 日期:t, 平台:'视频号', 选题标题:'本周课程内容回顾·家长必看', 热点来源:'内部课程', 文案要点:'维护老客户，末尾放社群引导', 状态:'制作中', 发布日期:t }
-    ],
-    todo: [
-      { _id:'d1', 日期:d(-1), 事项:'给家长群发本周训练反馈', 分类:'其他安排', 备注:'示例：昨天没做完的会自动滚到今天', 状态:'待处理' },
-      { _id:'d2', 日期:t, 事项:'10:00 热点检索 + 选题会上报 3 条', 分类:'本职进阶', 备注:'示例：点右侧圆圈标记完成', 状态:'待处理' }
-    ],
-    draft: [
-      { _id:'dr1', 日期:t, 关联选题:'少儿击剑入门：3 个动作看懂比赛规则', 目标平台:'抖音官方号',
-        初稿标题:'孩子第一次看击剑，90% 家长看不懂得分',
-        开头钩子:'你看的是两个人戳来戳去，裁判看的却是这盏灯——3 分钟讲明白。',
-        初稿正文:'【框架】\n0-3s 钩子：画面给得分灯特写，抛出认知冲突\n3-15s 规则：有效部位（面罩/躯干/手臂） vs 无效部位\n15-35s 演示：教练带小学员做一次完整得分动作\n35-50s 转化：想让孩子试一节体验课，评论区扣「击剑」\n【要点】全程用孩子视角讲解，避开专业术语堆砌。',
-        素材来源:'公众号「XX击剑」2026-10-07 推文框架 + 抖音热点榜 #少儿体育 话题拆解',
-        洗稿状态:'待采用', 备注:'示例：勾选＝采用，×＝作废' },
-      { _id:'dr2', 日期:t, 关联选题:'少儿击剑入门：3 个动作看懂比赛规则', 目标平台:'小红书',
-        初稿标题:'体培家长收藏｜一张图看懂击剑得分规则',
-        开头钩子:'花了 3 万报击剑课，第一节家长会我懵了——这张图早看到就好了。',
-        初稿正文:'首图：规则清单图（6 宫格）\nP2 有效部位示意\nP3 三种武器区别（花剑/重剑/佩剑）\nP4 孩子几岁开始合适\nP5 一节课的流程\nP6 结尾 CTA：评论区领《体培避坑清单》\n标签：#少儿击剑 #体育培训 #家长必看',
-        素材来源:'公众号「XX体培」家长决策类图文 + 小红书同类笔记TOP3 结构拆解',
-        洗稿状态:'待采用', 备注:'示例' }
-    ]
-  };
-}
 
 /* ---------- 读取：云服务优先 → 资料库 SDK → 本地 ---------- */
 var READ_TIMEOUT = 20000;
@@ -1899,25 +1856,10 @@ function loadAll(){
   next();
 }
 function afterLoad(){
-  /* 关键修复：读取失败 ≠ 空数据。
-     之前 total===0 就灌示例数据，导致云端拉取超时/失败时页面显示一堆假记录，
-     还把它们写进 localStorage 造成污染。现在只在「确认无云通道且本地也从未录过」时才演示。 */
-  var readBroken = _loadFailed.length > 0;
-  var total = state.fitness.length + state.growth.length + state.work.length;
-  var anyPending = ['fitness','growth','work','todo','draft'].some(function(k){
-    return (lsGet(k, []) || []).some(function(r){ return r && r._pending; });
-  });
-  if (!readBroken && total === 0 && !anyPending && !lsGet('demoShown', false) && !cloudOk() && !sdk) {
-    var demo = demoData();
-    ['fitness','growth','work','todo','draft'].forEach(function(k){
-      demo[k].forEach(function(r){ r._demo = 1; });
-    });
-    state.fitness = demo.fitness; state.growth = demo.growth; state.work = demo.work; state.todo = demo.todo; state.draft = demo.draft;
-    state.demo = true;
-    /* 示例数据只放内存，绝不写 localStorage —— 之前写进去会污染真实数据 */
-  }
-  var cd = $('#clearDemo');
-  if (cd) cd.hidden = !state.demo;
+  /* 正式使用版：不灌任何示例数据。
+     打开就是空白，用户录什么就是什么 —— 之前 total===0 就灌示例，
+     会把「孩子第一次看击剑」这类假记录混进真实数据里。 */
+  state.demo = false;
   renderLoadError();
   cleanDrafts();
   cleanStaleDrafts();
@@ -2208,7 +2150,7 @@ function renderFocus(){
     card.className = 'focus-card focus-empty';
     var w0 = $('#focusWrap'); if (w0) w0.classList.add('empty');
     card.innerHTML = '<div class="focus-body"><span class="focus-tag">今日焦点</span>'
-      + '<div class="focus-title">今天没有待办，加一件小事开始 🥕</div>'
+      + '<div class="focus-title">今天没有待办，加一件小事开始</div>'
       + '<div class="focus-meta">在下方输入框写入第一件，或点右上角「＋添加待办」</div></div>';
     return;
   }
@@ -4214,20 +4156,6 @@ function fallbackCopy(txt){
   } catch (err) { toast('复制失败，请手动选中'); }
 }
 
-$('#clearDemo').addEventListener('click', function(){
-  confirmBox('清空示例数据？', '只会移除预置的示例记录，你自己录入的数据不受影响。', function(){
-    ['fitness','growth','work','todo','draft'].forEach(function(k){
-      var arr = (lsGet(k, []) || []).filter(function(r){ return !(r && r._demo); });
-      lsSet(k, arr);
-      state[k] = (state[k] || []).filter(function(r){ return !(r && r._demo); });
-    });
-    lsSet('demoShown', true);
-    state.demo = false;
-    $('#clearDemo').hidden = true;
-    toast('示例数据已清空');
-    refreshAll();
-  });
-});
 
 // 主题固定为浅色（夜视按钮已去掉，不再提供深浅色切换）
 document.documentElement.setAttribute('data-theme', 'light');
@@ -4634,7 +4562,7 @@ function renderPlan(){
   var tl = $('#planTodayList');
   tl.innerHTML = today.length
     ? today.map(function(p){ var d0 = iso(p['计划日期']); return planItemHtml(p, t, d0 && d0 < t); }).join('')
-    : '<div class="plan-empty">今天没有待处理的计划 🎉</div>';
+    : '<div class="plan-empty">今天没有待处理的计划</div>';
   $('#planTodayNote').textContent = '未完成 ' + today.length + ' 条';
   var tml = $('#planTomorrowList');
   tml.innerHTML = tm.length
