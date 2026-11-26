@@ -10,7 +10,10 @@
 | 入口 | 链接 | 说明 |
 |---|---|---|
 | GitHub Pages | https://lexppp.github.io/daily-plan-board/ | 纯本地，手机 / 电脑都能开 |
-| WorkBuddy 站点 | https://plan-desk-2026.app.workbuddy.host | 需重新发布后才能访问，且 v1.2.0 不含云同步 |
+| WorkBuddy 站点 | https://plan-desk-2026.app.workbuddy.host/?sharecode=D7SRUTSV4O | 分享链接**必须带 `?sharecode=`**，裸域名会返回「链接不完整」 |
+
+> 注意：WorkBuddy 每次重新发布都会生成**新的 sharecode**，旧链接随之失效（表现就是 403 链接不完整）。
+> v1.2.0 是纯本地版，两个入口都不含云同步。
 
 ## 功能
 
