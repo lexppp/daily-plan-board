@@ -1028,8 +1028,8 @@ function loadTasks() {
       });
       if (migrated) saveTasks();
     } else {
-      tasks = getSampleData();
-      saveTasks();
+      /* 正式使用版：首次打开不灌任何示例数据，从空白开始 */
+      tasks = [];
     }
   } catch(e) {
     tasks = [];
