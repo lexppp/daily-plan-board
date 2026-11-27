@@ -984,12 +984,46 @@ function isTaskActiveOn(task, dateStr) {
   var end = getTaskEndDate(task);
   return task.planDate <= dateStr && dateStr <= end;
 }
+// 逾期天数 = 从「上次打卡」之后，到「昨天」为止，连续漏打卡的天数
+// 规则：
+//   1. 不算今天（今天还没过完，不能说人逾期）
+//   2. 今天已打卡 → 归零，任务自动从逾期表移出（补卡即清账）
+//   3. 从没打过卡 → 从计划开始日算起
+//   4. 一周 / 一月任务最多算到它的结束日
+function getMissedDays(task) {
+  var dur = task.duration || 'day';
+  if (dur === 'day' || !task.planDate) return 0;
+  var checkins = task.dailyCheckins || {};
+  if (checkins[todayStr()]) return 0; // 今天已打卡，不欠账
+  var start = parseDate(task.planDate);
+  var last = new Date();
+  last.setHours(0, 0, 0, 0);
+  last.setDate(last.getDate() - 1); // 昨天
+  if (dur !== 'longterm') {
+    var endD = parseDate(getTaskEndDate(task));
+    if (endD < last) last = endD;
+  }
+  if (start > last) return 0;
+  var missed = 0;
+  var d = new Date(last.getTime());
+  while (d >= start) {
+    if (checkins[fmtDate(d)]) break; // 碰到打卡日就停，之前的欠账不再追
+    missed++;
+    d.setDate(d.getDate() - 1);
+  }
+  return missed;
+}
+
 function isTaskOverdue(task) {
   var dur = task.duration || 'day';
-  if (dur === 'longterm') return false;
+  if (dur === 'day') {
+    if (task.planDate >= todayStr()) return false;
+    return !task.completed;
+  }
+  // 长期任务没有结束日，改成看「昨天及之前有没有漏打卡」
+  if (dur === 'longterm') return getMissedDays(task) > 0;
   var end = getTaskEndDate(task);
   if (end >= todayStr()) return false;
-  if (dur === 'day') return !task.completed;
   // 周期任务：今天打卡了就不算逾期（用户已补登）
   return !isTaskDoneOnDay(task, todayStr());
 }
@@ -1118,7 +1152,10 @@ function getActiveTasks() {
 function renderTodaySection() {
   var t = todayStr();
   var overdue = getOverdueTasks();
-  var todayTasks = getTodayTasks();
+  // 长期任务现在也会进逾期列表；从今天列表里剔掉，避免同一任务显示两行
+  var overdueIds = {};
+  overdue.forEach(function(tk) { overdueIds[tk.id] = true; });
+  var todayTasks = getTodayTasks().filter(function(tk) { return !overdueIds[tk.id]; });
 
   // Categorize today tasks: longterm vs ongoing vs today
   var longtermTasks = todayTasks.filter(function(task) { return (task.duration || 'day') === 'longterm'; });
@@ -1167,8 +1204,13 @@ function renderTodaySection() {
     if (task.remind) {
       durBadge += '<span class="remind-badge">提醒 ' + task.remind + '</span>';
     }
+    var badgeHtml = badges[task._status];
+    if (task._status === 'overdue' && dur !== 'day') {
+      var md = getMissedDays(task);
+      badgeHtml = '<span class="today-badge overdue">逾期 ' + md + ' 天</span>';
+    }
     return '<div class="today-item' + (task._status === 'overdue' ? ' overdue' : '') + '">' +
-      badges[task._status] +
+      badgeHtml +
       '<span class="today-item-title">' + escapeHtml(task.title) + timeStr + '</span>' +
       durBadge +
       '<span class="today-item-priority priority-' + task.priority + '">' + task.priority + '</span>' +
@@ -1255,7 +1297,9 @@ function renderTaskList() {
     var isDoneToday = isTaskDoneOnDay(task, t);
     var dateLabel = '';
     if (dur === 'longterm') {
+      var mdL = getMissedDays(task);
       dateLabel = '长期 · 起 ' + task.planDate.slice(5);
+      if (mdL > 0) dateLabel = '逾期 ' + mdL + ' 天 · 起 ' + task.planDate.slice(5);
     } else if (dur === 'day') {
       if (task.planDate === t) dateLabel = '今天';
       else if (task.planDate < t) dateLabel = '逾期 ' + task.planDate.slice(5);
