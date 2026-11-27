@@ -149,6 +149,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 .task-edit{background:none;border:none;cursor:pointer;padding:4px;color:var(--text-3);border-radius:4px;flex-shrink:0;transition:all .15s}
 .task-edit:hover{color:var(--primary);background:var(--primary-light)}
 .task-edit svg{width:16px;height:16px}
+/* 补卡按钮（仅逾期任务出现） */
+.task-backfill{background:var(--danger-light);border:none;cursor:pointer;color:var(--danger);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;font-family:inherit;flex-shrink:0;transition:all .15s}
+.task-backfill:hover{background:var(--danger);color:#fff}
+/* 逾期页签右上角红色感叹号 */
+.filter-tab{position:relative}
+.tab-alert{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:12px;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(239,68,68,.45);box-sizing:border-box}
+/* 补卡弹窗 */
+.bf-quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.bf-quick .btn{padding:5px 10px;font-size:12px}
+.bf-summary{font-size:12px;color:var(--text-2);line-height:1.7;margin-bottom:10px}
+.bf-dates{max-height:38vh;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px}
+.bf-day{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:13px}
+.bf-day:hover{background:var(--bg)}
+.bf-day.sel{background:var(--danger-light)}
+.bf-day.done{opacity:.5;cursor:default}
+.bf-box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;background:var(--card);line-height:1}
+.bf-day.sel .bf-box{background:var(--danger);border-color:var(--danger)}
+.bf-day.done .bf-box{background:var(--success);border-color:var(--success)}
+.bf-date{font-weight:600;font-family:ui-monospace,Menlo,Consolas,monospace}
+.bf-dow{color:var(--text-3);font-size:12px}
+.bf-state{margin-left:auto;font-size:11px;color:var(--text-3)}
+.bf-day.sel .bf-state{color:var(--danger);font-weight:700}
+.bf-day.done .bf-state{color:var(--success);font-weight:700}
+.bf-empty{padding:18px;text-align:center;color:var(--text-3);font-size:12px}
 .task-item.editing{display:block;background:#f8fafc;border-color:var(--primary);box-shadow:var(--shadow-md)}
 .edit-form{display:flex;flex-direction:column;gap:10px}
 .edit-form .form-label{margin-bottom:4px}
@@ -475,7 +499,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
             <div class="filter-tab" data-filter="active" onclick="setFilter('active')">进行中</div>
             <div class="filter-tab" data-filter="all" onclick="setFilter('all')">全部</div>
             <div class="filter-tab" data-filter="completed" onclick="setFilter('completed')">已完成</div>
-            <div class="filter-tab" data-filter="overdue" onclick="setFilter('overdue')">逾期</div>
+            <div class="filter-tab" data-filter="overdue" onclick="setFilter('overdue')">逾期<span class="tab-alert" id="overdueTabAlert" style="display:none">!</span></div>
           </div>
           <div id="taskList"></div>
         </div>
@@ -764,6 +788,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   </div>
 </div>
 
+<!-- ===== 补卡弹窗（勾选要补哪几天） ===== -->
+<div id="backfillModal" class="modal-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">补卡 · <span id="backfillTaskName">任务</span></div>
+    <div class="modal-body">
+      <div class="bf-summary" id="backfillSummary"></div>
+      <div class="bf-quick">
+        <button class="btn btn-outline btn-sm" onclick="bfSelectMissed()" id="bfMissedBtn">补最近漏的 0 天</button>
+        <button class="btn btn-outline btn-sm" onclick="bfSelectAll()">全选未打卡</button>
+        <button class="btn btn-outline btn-sm" onclick="bfClear()">清空</button>
+      </div>
+      <div class="bf-dates" id="bfDates"></div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:8px;line-height:1.6">
+        点日期即可勾选/取消；已打卡的日期显示为绿色。今天请用「打卡」，补卡只补昨天及以前。
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="closeBackfill()">取消</button>
+      <button class="btn btn-primary" onclick="confirmBackfill()" id="bfConfirmBtn">确认补卡 0 天</button>
+    </div>
+  </div>
+</div>
+
 <div class="bottom-spacer"></div>
 
 <script>
@@ -772,8 +819,13 @@ var STORAGE_KEY = 'wb_dailyplan_tasks';
 var selectedPriority = 'P2';
 
 // ===== 版本与更新日志 =====
-var APP_VERSION = '1.2.0';
+var APP_VERSION = '1.3.0';
 var RELEASE_NOTES = {
+  '1.3.0': [
+    '新增「补卡」：逾期任务右侧出现「补卡」按钮，点开可自由勾选要补的日期，一次补 1 天或一次补满都行',
+    '长期任务漏打卡不再隐身：昨天没打卡就会进逾期列表并显示「逾期 N 天」，今天补了卡自动清零',
+    '计划列表「逾期」页签右上角新增红色感叹号，有逾期就亮，处理完自动消失'
+  ],
   '1.2.0': [
     '新增「消息中心」：逾期、紧急任务和版本更新都会推送进来，有未读时顶部「消息」按钮显示红点',
     '新增版本更新弹窗：每次更新后首次打开自动展示更新内容',
@@ -915,8 +967,15 @@ function inboxSweep() {
   renderInboxBadge();
 }
 
-// 版本更新弹窗：每个版本仅首次打开出现；关闭后转入消息中心
+// 版本更新弹窗：每个版本仅首次打开出现；同时每个版本都往消息中心push一封更新通知
+function pushUpdateMail() {
+  var notes = RELEASE_NOTES[APP_VERSION] || [];
+  if (!notes.length) return;
+  addMail('update', '已更新到 v' + APP_VERSION, notes.join('；'), 'update_' + APP_VERSION);
+  renderInboxBadge();
+}
 function checkUpdatePopup() {
+  pushUpdateMail(); // 先入消息中心：即使弹窗被忽略，消息也不会丢
   if (localStorage.getItem(SEEN_VER_KEY) === APP_VERSION) return;
   var notes = RELEASE_NOTES[APP_VERSION] || [];
   document.getElementById('updateVersionLabel').textContent = 'v' + APP_VERSION;
@@ -1336,6 +1395,7 @@ function renderTaskList() {
         (task.note ? '<div class="task-note">' + escapeHtml(task.note) + '</div>' : '') +
       '</div>' +
       '<div class="task-actions">' +
+        (overdue && dur !== 'day' ? '<button class="task-backfill" title="补卡：勾选要补哪几天" onclick="openBackfill(' + task.id + ')">补卡</button>' : '') +
         '<button class="task-edit" title="编辑" onclick="startEdit(' + task.id + ')">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>' +
         '</button>' +
@@ -1961,6 +2021,154 @@ function quickComplete(id, dateStr) {
       showToast('✓ 打卡成功' + (isToday ? '' : '（' + t.slice(5) + '）') + '：' + task.title, 'success');
     }
   }
+}
+
+// ===== 补卡（逾期任务回填过去某几天的打卡）=====
+var bfTaskId = null;
+var bfSel = {};
+
+function bfTask() {
+  var list = tasks.filter(function(t) { return t.id === bfTaskId; });
+  return list.length ? list[0] : null;
+}
+// 可补日期范围：开始日（或最近 120 天）到昨天，新→旧
+function bfDateRange(task) {
+  var end = new Date();
+  end.setHours(0, 0, 0, 0);
+  end.setDate(end.getDate() - 1); // 昨天
+  var start = parseDate(task.planDate);
+  var dur = task.duration || 'day';
+  if (dur !== 'longterm') {
+    var e = parseDate(getTaskEndDate(task));
+    if (e < end) end = e;
+  }
+  var maxDays = 120; // 老任务不铺几千行
+  if (daysBetween(start, end) + 1 > maxDays) {
+    start = new Date(end.getTime());
+    start.setDate(start.getDate() - (maxDays - 1));
+  }
+  var arr = [];
+  var d = new Date(end.getTime());
+  while (d >= start) {
+    arr.push(fmtDate(d));
+    d.setDate(d.getDate() - 1);
+  }
+  return arr;
+}
+// 最近连续漏掉的那几天（就是从昨天往前，碰到打卡日为止）
+function bfMissedDates(task) {
+  var dates = bfDateRange(task);
+  var checkins = task.dailyCheckins || {};
+  var out = [];
+  for (var i = 0; i < dates.length; i++) {
+    if (checkins[dates[i]]) break;
+    out.push(dates[i]);
+  }
+  return out;
+}
+
+function openBackfill(id) {
+  var task = tasks.filter(function(t) { return t.id === id; })[0];
+  if (!task) return;
+  if ((task.duration || 'day') === 'day') { showToast('单日任务直接勾选完成即可', 'info'); return; }
+  bfTaskId = id;
+  bfSel = {};
+  document.getElementById('backfillTaskName').textContent = task.title;
+  bfSelectMissed(); // 默认勾上最近漏掉的那几天
+  document.getElementById('backfillModal').classList.add('show');
+  renderBackfill();
+}
+function closeBackfill() {
+  document.getElementById('backfillModal').classList.remove('show');
+  bfTaskId = null;
+  bfSel = {};
+}
+function bfToggle(ds) {
+  var task = bfTask();
+  if (!task) return;
+  if ((task.dailyCheckins || {})[ds]) return; // 已打卡的不能操作
+  if (bfSel[ds]) delete bfSel[ds];
+  else bfSel[ds] = true;
+  renderBackfill();
+}
+function bfSelectMissed() {
+  var task = bfTask();
+  if (!task) return;
+  bfSel = {};
+  bfMissedDates(task).forEach(function(d) { bfSel[d] = true; });
+  renderBackfill();
+}
+function bfSelectAll() {
+  var task = bfTask();
+  if (!task) return;
+  var checkins = task.dailyCheckins || {};
+  bfSel = {};
+  bfDateRange(task).forEach(function(d) { if (!checkins[d]) bfSel[d] = true; });
+  renderBackfill();
+}
+function bfClear() {
+  bfSel = {};
+  renderBackfill();
+}
+function bfSelCount() { return Object.keys(bfSel).length; }
+
+function renderBackfill() {
+  var task = bfTask();
+  if (!task) return;
+  var checkins = task.dailyCheckins || {};
+  var dates = bfDateRange(task);
+  var missed = getMissedDays(task);
+  document.getElementById('backfillSummary').innerHTML =
+    '逾期 <strong style="color:var(--danger)">' + missed + ' 天</strong>' +
+    '（上次打卡之后连续没打的天数）· 可补范围 ' + (dates.length ? dates[dates.length - 1].slice(5) + ' ~ ' + dates[0].slice(5) : '无') +
+    ' · 已选 <strong style="color:var(--danger)">' + bfSelCount() + ' 天</strong>';
+  document.getElementById('bfMissedBtn').textContent = '补最近漏的 ' + missed + ' 天';
+  document.getElementById('bfConfirmBtn').textContent = '确认补卡 ' + bfSelCount() + ' 天';
+
+  var box = document.getElementById('bfDates');
+  if (!dates.length) {
+    box.innerHTML = '<div class="bf-empty">没有可补的日期（今天才开始的计划，明天开始才有得补）</div>';
+    return;
+  }
+  box.innerHTML = dates.map(function(ds) {
+    var done = !!checkins[ds];
+    var sel = !!bfSel[ds];
+    var dow = '周' + WEEK_DOW[(parseDate(ds).getDay() + 6) % 7];
+    return '<div class="bf-day' + (sel ? ' sel' : '') + (done ? ' done' : '') + '"' +
+      (done ? '' : ' onclick="bfToggle(\'' + ds + '\')"') + '>' +
+      '<span class="bf-box">' + ((done || sel) ? '✓' : '') + '</span>' +
+      '<span class="bf-date">' + ds.slice(5) + '</span>' +
+      '<span class="bf-dow">' + dow + '</span>' +
+      '<span class="bf-state">' + (done ? '已打卡' : (sel ? '补卡' : '未打卡')) + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function confirmBackfill() {
+  var task = bfTask();
+  if (!task) return;
+  var dates = Object.keys(bfSel);
+  if (!dates.length) { showToast('请先选择要补卡的日期', 'info'); return; }
+  var id = bfTaskId;
+  var title = task.title;
+  tasks = tasks.map(function(tk) {
+    if (tk.id !== id) return tk;
+    var c = Object.assign({}, tk.dailyCheckins || {});
+    dates.forEach(function(d) { c[d] = Date.now(); });
+    return Object.assign({}, tk, { dailyCheckins: c, updatedAt: Date.now() });
+  });
+  saveTasks();
+  closeBackfill();
+  renderAll();
+  var left = getMissedDays(tasks.filter(function(t) { return t.id === id; })[0]);
+  showToast('✓ 已补卡 ' + dates.length + ' 天：' + title + (left > 0 ? '（还差 ' + left + ' 天）' : '，逾期已清零'), 'success');
+}
+
+// 逾期页签右上角红色感叹号：有逾期才亮
+function syncOverdueTabBadge() {
+  var el = document.getElementById('overdueTabAlert');
+  if (!el) return;
+  el.style.display = getOverdueTasks().length > 0 ? 'block' : 'none';
 }
 
 // ===== Toast 轻提示 =====
@@ -2594,6 +2802,7 @@ function renderAll() {
   renderTomorrowSection();
   renderTaskList();
   renderStats();
+  syncOverdueTabBadge();
   checkBackupNotice();
   if (currentView === 'week') renderWeekBoard();
 }
